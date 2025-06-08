@@ -1,0 +1,19 @@
+.component {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: var(--reactodia-spacing-vertical) var(--reactodia-spacing-horizontal);
+}
+
+.groupLabel {
+  color: var(--reactodia-color-emphasis-700);
+}
+
+.operator {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.validation {
+  grid-column: 1 / -1;
+  color: var(--reactodia-color-danger-light);
+}
