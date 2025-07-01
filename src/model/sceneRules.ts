@@ -42,7 +42,7 @@ export function rulesIntoQuads(rules: readonly SceneRule[], factory: Reactodia.R
 
   for (const scene of scenes) {
     quads.push(factory.quad(
-      factory.namedNode(`${app.Namespace}scene:${scene}`),
+      factory.namedNode(`${app.$namespace}scene:${scene}`),
       typePredicate,
       sceneType
     ));
@@ -54,9 +54,9 @@ export function rulesIntoQuads(rules: readonly SceneRule[], factory: Reactodia.R
 
   for (const rule of rules) {
     const ruleQuad = factory.quad(
-      factory.namedNode(`${app.Namespace}scene:${rule.current_scene}`),
+      factory.namedNode(`${app.$namespace}scene:${rule.current_scene}`),
       toPredicate,
-      factory.namedNode(`${app.Namespace}scene:${rule.result_scene}`)
+      factory.namedNode(`${app.$namespace}scene:${rule.result_scene}`)
     );
     quads.push(ruleQuad);
     if (rule.weight !== 1) {

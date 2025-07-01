@@ -21,7 +21,7 @@ export function App() {
 
   const [dataSource, setDataSource] = React.useState<DataSource | null>(null);
 
-  const {onMount} = Reactodia.useLoadedWorkspace(async ({context, signal}) => {
+  const {onMount, getContext} = Reactodia.useLoadedWorkspace(async ({context, signal}) => {
     const {model, editor, performLayout} = context;
     editor.setAuthoringMode(true);
 
@@ -73,8 +73,36 @@ export function App() {
           />
         }
         canvas={{
-          elementTemplateResolver: () => Reactodia.RoundTemplate,
+          elementTemplateResolver: elementType =>
+            elementType.includes(app.Scene) ? Reactodia.RoundTemplate : undefined,
+          linkTemplateResolver: linkType =>
+            linkType === app.to ? LinkTemplate : undefined,
         }}
+        canvasWidgets={[
+          <Reactodia.Toolbar dock='s'>
+            <Reactodia.ToolbarAction hotkey='None+S'
+              title='Add a new scene to the graph'
+              onSelect={async () => {
+                const { editor, view, disposeSignal } = getContext();
+                const data = await metadataProvider.createEntity(app.Scene, { signal: disposeSignal });
+                const element = editor.createEntity(data);
+                const canvas = view.findAnyCanvas()!;
+                const position = canvas.metrics.clientToPaperCoords(
+                  canvas.metrics.area.clientWidth / 2,
+                  canvas.metrics.area.clientHeight / 2
+                );
+                element.setPosition(position);
+                canvas.renderingState.syncUpdate();
+                const {width, height} = Reactodia.boundsOf(element, canvas.renderingState);
+                element.setPosition({
+                  x: position.x - width / 2,
+                  y: position.y - height / 2,
+                });
+              }}>
+              + Add scene
+            </Reactodia.ToolbarAction>
+          </Reactodia.Toolbar>
+        ]}
         visualAuthoring={{
           inputResolver: (property, inputProps) => {
             if (property === 'urn:reactodia:entityIri') {
@@ -92,6 +120,15 @@ export function App() {
   );
 }
 
+const LinkTemplate: Reactodia.LinkTemplate = {
+  ...Reactodia.DefaultLinkTemplate,
+  renderLink: props => (
+    <Reactodia.DefaultLink {...props}
+      primaryLabelProps={{style: {display: 'none'}}}
+    />
+  ),
+};
+
 function SceneNameInput(props: Reactodia.FormInputMultiProps) {
   const {values, updateValues, factory} = props;
 
@@ -99,7 +136,7 @@ function SceneNameInput(props: Reactodia.FormInputMultiProps) {
   const sceneNameUpdate = React.useCallback((updater: Reactodia.FormInputMultiUpdater) => {
     updateValues(previous => {
       const nextValues = updater(deriveSceneName(previous, factory));
-      return nextValues.map(term => factory.namedNode(`${app.Namespace}scene:${term.value}`));
+      return nextValues.map(term => factory.namedNode(`${app.$namespace}scene:${term.value}`));
     });
   }, [updateValues, factory]);
 

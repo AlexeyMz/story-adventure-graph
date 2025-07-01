@@ -2,7 +2,7 @@ import * as Reactodia from '@reactodia/workspace';
 
 const APP_NAMESPACE = 'urn:story-adventure:';
 export const app = {
-  Namespace: APP_NAMESPACE,
+  $namespace: APP_NAMESPACE,
   Scene: `${APP_NAMESPACE}Scene`,
   RuleCondition: `${APP_NAMESPACE}RuleCondition`,
   condition: `${APP_NAMESPACE}condition`,
