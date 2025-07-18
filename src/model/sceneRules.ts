@@ -42,7 +42,7 @@ export function rulesIntoQuads(rules: readonly SceneRule[], factory: Reactodia.R
 
   for (const scene of scenes) {
     quads.push(factory.quad(
-      factory.namedNode(`${app.$namespace}scene:${scene}`),
+      factory.namedNode(sceneIri(scene)),
       typePredicate,
       sceneType
     ));
@@ -54,9 +54,9 @@ export function rulesIntoQuads(rules: readonly SceneRule[], factory: Reactodia.R
 
   for (const rule of rules) {
     const ruleQuad = factory.quad(
-      factory.namedNode(`${app.$namespace}scene:${rule.current_scene}`),
+      factory.namedNode(sceneIri(rule.current_scene)),
       toPredicate,
-      factory.namedNode(`${app.$namespace}scene:${rule.result_scene}`)
+      factory.namedNode(sceneIri(rule.result_scene))
     );
     quads.push(ruleQuad);
     if (rule.weight !== 1) {
@@ -114,4 +114,85 @@ export function deserializeCondition(
     ),
     value: Number(value),
   };
+}
+
+function frameRule(data: Reactodia.LinkModel): SceneRule {
+  const weightValues = data.properties[app.weight];
+  const weightValue = weightValues && weightValues.length === 1 ? weightValues[0] : undefined;
+  const weight = weightValue && weightValue.termType === 'Literal' ? Number(weightValue.value) : undefined;
+
+  const conditions: SceneRuleCondition[] = [];
+  const conditionValues = data.properties[app.condition];
+  if (conditionValues) {
+    for (const conditionValue of conditionValues) {
+      if (conditionValue.termType === 'Literal' && conditionValue.datatype.value === app.RuleCondition) {
+        conditions.push(deserializeCondition(conditionValue));
+      }
+    }
+  }
+
+  return {
+    current_scene: Reactodia.Rdf.getLocalName(data.sourceId) ?? data.sourceId,
+    result_scene: Reactodia.Rdf.getLocalName(data.targetId) ?? data.targetId,
+    weight: weight ?? 1,
+    params: conditions,
+  };
+}
+
+export function sceneIri(sceneId: string): Reactodia.ElementIri {
+  return `${app.$namespace}scene:${sceneId}`;
+}
+
+export function applyRuleChanges(rules: readonly SceneRule[], state: Reactodia.AuthoringState): SceneRule[] {
+  const changedRules: SceneRule[] = [];
+
+  for (const rule of rules) {
+    const ruleKey: Reactodia.LinkKey = {
+      sourceId: sceneIri(rule.current_scene),
+      targetId: sceneIri(rule.result_scene),
+      linkTypeId: app.to,
+    };
+
+    if (Reactodia.AuthoringState.isDeletedRelation(state, ruleKey)) {
+      continue;
+    }
+
+    const ruleEvent = state.links.get(ruleKey);
+    changedRules.push(
+      ruleEvent?.type === 'relationChange'
+        ? { ...rule, ...frameRule(ruleEvent.data) }
+        : rule
+    );
+  }
+
+  for (const event of state.links.values()) {
+    if (event.type === 'relationAdd') {
+      changedRules.push(frameRule(event.data));
+    }
+  }
+
+  const renamedFromToScenes = new Map<string, string>();
+  for (const event of state.elements.values()) {
+    if (event.type === 'entityChange' && event.newIri !== undefined) {
+      renamedFromToScenes.set(
+        Reactodia.Rdf.getLocalName(event.before.id) ?? event.before.id,
+        Reactodia.Rdf.getLocalName(event.newIri) ?? event.newIri
+      );
+    }
+  }
+
+  for (let i = 0; i < changedRules.length; i++) {
+    const rule = changedRules[i];
+    const renamedCurrent = renamedFromToScenes.get(rule.current_scene);
+    const renamedResult = renamedFromToScenes.get(rule.result_scene);
+    if (renamedCurrent !== undefined || renamedResult !== undefined) {
+      changedRules[i] = {
+        ...rule,
+        current_scene: renamedCurrent ?? rule.current_scene,
+        result_scene: renamedResult ?? rule.result_scene,
+      };
+    }
+  }
+
+  return changedRules;
 }

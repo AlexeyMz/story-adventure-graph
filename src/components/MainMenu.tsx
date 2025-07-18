@@ -38,7 +38,7 @@ export function MainMenu(props: {
           downloadLink.click();
           URL.revokeObjectURL(blobUrl);
         }}>
-        Apply changes and save the graph
+        Save changed graph
       </Reactodia.ToolbarActionSave>
       <Reactodia.ToolbarActionClearAll />
       <Reactodia.ToolbarActionExport kind='exportRaster' />

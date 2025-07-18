@@ -2,8 +2,9 @@ import * as React from 'react';
 import * as Reactodia from '@reactodia/workspace';
 import LayoutWorker from '@reactodia/workspace/layout.worker?worker';
 
+import { applyAuthoringState } from '../model/applyAuthoringState';
 import { SceneMetadataProvider } from '../model/metadataProvider';
-import { type SceneRule, makeSceneSchema, rulesIntoQuads } from '../model/sceneRules';
+import { type SceneRule, makeSceneSchema, sceneIri, rulesIntoQuads, applyRuleChanges } from '../model/sceneRules';
 import { app } from '../model/vocabulary';
 
 import { MainMenu } from './MainMenu';
@@ -14,6 +15,7 @@ const Layouts = Reactodia.defineLayoutWorker(() => new LayoutWorker());
 
 interface DataSource {
   readonly sceneRulesJson: string;
+  readonly initialLayout?: Reactodia.SerializedDiagram;
 }
 
 export function App() {
@@ -29,14 +31,10 @@ export function App() {
     dataProvider.addGraph(makeSceneSchema(dataProvider.factory));
 
     if (dataSource) {
-      try {
-        const sceneRules: SceneRule[] = JSON.parse(dataSource.sceneRulesJson);
-        dataProvider.addGraph(rulesIntoQuads(sceneRules, dataProvider.factory));
-      } catch (err) {
-        throw new Error('Error parsing scene rules graph', {cause: err});
-      }
+      const sceneRules = parseRulesJson(dataSource.sceneRulesJson);
+      dataProvider.addGraph(rulesIntoQuads(sceneRules, dataProvider.factory));
 
-      await model.importLayout({dataProvider, signal});
+      await model.importLayout({dataProvider, diagram: dataSource.initialLayout, signal});
 
       const elements = (await dataProvider.lookup({elementTypeId: app.Scene}))
         .map(scene => model.createElement(scene.element));
@@ -69,7 +67,21 @@ export function App() {
         menu={
           <MainMenu
             onOpen={jsonData => setDataSource({sceneRulesJson: jsonData})}
-            onSave={() => ''}
+            onSave={() => {
+              const { model, editor } = getContext();
+
+              const initialRules = dataSource ? parseRulesJson(dataSource.sceneRulesJson) : [];
+              const changedRules = applyRuleChanges(initialRules, editor.authoringState);
+              const changedJson = JSON.stringify(changedRules, null, 4);
+
+              applyAuthoringState(getContext());
+              setDataSource({
+                sceneRulesJson: changedJson,
+                initialLayout: model.exportLayout(),
+              });
+
+              return changedJson;
+            }}
           />
         }
         canvas={{
@@ -136,7 +148,7 @@ function SceneNameInput(props: Reactodia.FormInputMultiProps) {
   const sceneNameUpdate = React.useCallback((updater: Reactodia.FormInputMultiUpdater) => {
     updateValues(previous => {
       const nextValues = updater(deriveSceneName(previous, factory));
-      return nextValues.map(term => factory.namedNode(`${app.$namespace}scene:${term.value}`));
+      return nextValues.map(term => factory.namedNode(sceneIri(term.value)));
     });
   }, [updateValues, factory]);
 
@@ -154,4 +166,13 @@ function deriveSceneName(
   factory: Reactodia.Rdf.DataFactory
 ) {
   return values.map(term => factory.literal(Reactodia.Rdf.getLocalName(term.value) ?? term.value));
+}
+
+function parseRulesJson(sceneRulesJson: string): SceneRule[] {
+  try {
+    const sceneRules: SceneRule[] = JSON.parse(sceneRulesJson);
+    return sceneRules;
+  } catch (err) {
+    throw new Error('Error parsing scene rules graph', {cause: err});
+  }
 }
