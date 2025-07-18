@@ -9,7 +9,7 @@ import { app } from '../model/vocabulary';
 
 import { MainMenu } from './MainMenu';
 import { RuleConditionInput } from './RuleConditionInput';
-import './App.css';
+import styles from './App.module.css';
 
 const Layouts = Reactodia.defineLayoutWorker(() => new LayoutWorker());
 
@@ -137,6 +137,7 @@ const LinkTemplate: Reactodia.LinkTemplate = {
   renderLink: props => (
     <Reactodia.DefaultLink {...props}
       primaryLabelProps={{style: {display: 'none'}}}
+      propertyLabelProps={{className: styles.linkProperty}}
     />
   ),
 };
