@@ -90,31 +90,7 @@ export function App() {
           linkTemplateResolver: linkType =>
             linkType === app.to ? LinkTemplate : undefined,
         }}
-        canvasWidgets={[
-          <Reactodia.Toolbar dock='s'>
-            <Reactodia.ToolbarAction hotkey='None+S'
-              title='Add a new scene to the graph'
-              onSelect={async () => {
-                const { editor, view, disposeSignal } = getContext();
-                const data = await metadataProvider.createEntity(app.Scene, { signal: disposeSignal });
-                const element = editor.createEntity(data);
-                const canvas = view.findAnyCanvas()!;
-                const position = canvas.metrics.clientToPaperCoords(
-                  canvas.metrics.area.clientWidth / 2,
-                  canvas.metrics.area.clientHeight / 2
-                );
-                element.setPosition(position);
-                canvas.renderingState.syncUpdate();
-                const {width, height} = Reactodia.boundsOf(element, canvas.renderingState);
-                element.setPosition({
-                  x: position.x - width / 2,
-                  y: position.y - height / 2,
-                });
-              }}>
-              + Add scene
-            </Reactodia.ToolbarAction>
-          </Reactodia.Toolbar>
-        ]}
+        annotations={null}
         visualAuthoring={{
           inputResolver: (property, inputProps) => {
             if (property === 'urn:reactodia:entityIri') {
@@ -126,8 +102,31 @@ export function App() {
             }
             return undefined;
           }
-        }}
-      />
+        }}>
+        <Reactodia.Toolbar dock='s'>
+          <Reactodia.ToolbarAction hotkey='None+S'
+            title='Add a new scene to the graph'
+            onSelect={async () => {
+              const { editor, view, disposeSignal } = getContext();
+              const { data } = await metadataProvider.createEntity(app.Scene, { signal: disposeSignal });
+              const element = editor.createEntity(data);
+              const canvas = view.findAnyCanvas()!;
+              const position = canvas.metrics.clientToPaperCoords(
+                canvas.metrics.area.clientWidth / 2,
+                canvas.metrics.area.clientHeight / 2
+              );
+              element.setPosition(position);
+              canvas.renderingState.syncUpdate();
+              const {width, height} = Reactodia.boundsOf(element, canvas.renderingState);
+              element.setPosition({
+                x: position.x - width / 2,
+                y: position.y - height / 2,
+              });
+            }}>
+            + Add scene
+          </Reactodia.ToolbarAction>
+        </Reactodia.Toolbar>
+      </Reactodia.DefaultWorkspace>
     </Reactodia.Workspace>
   );
 }
