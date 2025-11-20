@@ -31,9 +31,11 @@ export class SceneMetadataProvider extends Reactodia.BaseMetadataProvider {
       createEntity: async type => {
         const id = 'scene' + String(Math.floor(100000 * (1 + Math.random()))).substring(1);
         return {
-          id: type === app.Scene ? `${app.$namespace}scene:${id}` : `${app.$namespace}entity:${id}`,
-          types: [app.Scene],
-          properties: {},
+          data: {
+            id: type === app.Scene ? `${app.$namespace}scene:${id}` : `${app.$namespace}entity:${id}`,
+            types: [app.Scene],
+            properties: {},
+          },
         };
       },
       canConnect: async (source, target, linkType) => {
