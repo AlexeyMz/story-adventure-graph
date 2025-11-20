@@ -61,7 +61,8 @@ export class SceneMetadataProvider extends Reactodia.BaseMetadataProvider {
             valueShape: {
               termType: 'Literal',
               datatype: this.factory.namedNode(xsd.double),
-            }
+            },
+            maxCount: 1,
           });
           properties.set(app.condition, {
             valueShape: {
